@@ -6,13 +6,13 @@
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
 // @exclude      https://*.eyewire.org/1.0/*
-// @downloadURL  https://raw.githubusercontent.com/ChrisRaven/Cubes/master/cubes.user.js
+// @downloadURL  https://raw.githubusercontent.com/ChrisRaven/EyeWire-Cubes/master/cubes.user.js
 // ==/UserScript==
 
 /*jshint esversion: 6 */
 /*globals $, account, tomni, Cell */
 
-let LOCAL = false;
+let LOCAL = true;
 if (LOCAL) {
   console.log('%c--== TURN OFF "LOCAL" BEFORE RELEASING!!! ==--', "color: red; font-style: italic; font-weight: bold;");
 }
@@ -147,5 +147,14 @@ function Settings() {
     }
   }
 
+
+
+  
+  if (LOCAL) {
+    K.addCSSFile('http://127.0.0.1:8887/styles.css');
+  }
+  else {
+    K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css');
+  }
 
 });
