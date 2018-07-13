@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -178,6 +178,7 @@ function Settings() {
 
   function tabMain() {
     K.gid('ews-cubes-tab-main').classList.add('loading');
+    clickedCubes = [];
     $.when($.getJSON("/1.0/cell/" + tomni.cell + "/heatmap/scythe"))
     .always(() => {K.gid('ews-cubes-tab-main').classList.remove('loading');});
   }
@@ -224,6 +225,8 @@ function Settings() {
       else {
         K.gid('ews-cubes-container').innerHTML = '<div class="msg">No cubes to SC for you</div>';
       }
+
+      K.gid('ews-cubes-tab-sc-info').title = 'done: ' + completedByMe.length + ', available: ' + potential.length;
     })
     .always(() => {K.gid('ews-cubes-tab-sc-info').classList.remove('loading');});
   }
@@ -237,10 +240,14 @@ function Settings() {
 
     K.gid('ews-cubes-tab-low-wt-sc').classList.add('loading');
     $.when($.getJSON("/1.0/cell/" + cellId + "/heatmap/low-weight?weight=3"),
-          $.getJSON("/1.0/cell/" + cellId + "/tasks/complete/player"))
-      .done(function (lowWt, completeData) {
+          $.getJSON("/1.0/cell/" + cellId + "/tasks/complete/player"),
+          $.getJSON("/1.0/cell/" + cellId + "/heatmap/scythe"))
+      .done(function (lowWt, completeData, heatmap) {
           lowWt = lowWt[0];
           completeData = completeData[0];
+          heatmap = heatmap[0];
+
+          let adminFrozen = heatmap.frozen;
 
           let myTasks = completeData.scythe[account.account.uid.toString()] || [];
           myTasks = myTasks.concat(completeData.admin[account.account.uid.toString()] || []);
@@ -250,7 +257,9 @@ function Settings() {
               let wts = lowWt[i];
               if (wts) {
                 for (let j = 0; j < wts.length; j++) {
-                    ids.push(wts[j].task_id);
+                    if (!adminFrozen.includes(wts[j].task_id)) {
+                      ids.push(wts[j].task_id);
+                    }
                 }
               }
           }
@@ -279,10 +288,13 @@ function Settings() {
     K.gid('ews-cubes-container').innerHTML = '';
   }
 
-  function addCube(id, color) {
+  function addCube(id, color, borderColor) {
     let cube = document.createElement('div');
     cube.classList.add('ews-cubes-cube');
     cube.style.backgroundColor = color;
+    if (activeTab === 'ews-cubes-tab-main' && clickedCubes.includes(id)) {
+      cube.style.borderColor = 'black';
+    }
     cube.dataset.id = id;
     cube.title = id;
     K.gid('ews-cubes-container').appendChild(cube);
@@ -356,6 +368,7 @@ function Settings() {
 
   // let settings;
   let activeTab = 'ews-cubes-tab-main';
+  let clickedCubes = [];
 
 
   function main() {
@@ -430,12 +443,14 @@ function Settings() {
 
     $('#ews-cubes-container')
       .on('click', '.ews-cubes-cube', function () {
+        let id = parseInt(this.dataset.id, 10);
+
         if (event.ctrlKey) {
-          copyTextToClipboard(this.dataset.id);
+          copyTextToClipboard(id);
           return;
         }
 
-        tomni.jumpToTaskID(parseInt(this.dataset.id), 10);
+        tomni.jumpToTaskID(id);
         if (activeTab === 'ews-cubes-tab-sc-info') {
           this.style.backgroundColor = Cell.ScytheVisionColors.complete2;
         }
@@ -443,6 +458,7 @@ function Settings() {
           this.style.backgroundColor = Cell.ScytheVisionColors.complete3;
         }
         else if (activeTab === 'ews-cubes-tab-main') {
+          clickedCubes.push(id);
           this.style.borderColor = 'black';
         }
       });

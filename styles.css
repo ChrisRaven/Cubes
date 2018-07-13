@@ -1,5 +1,5 @@
 .ovlbContainer {
-  height: calc(100% - 186px) !important;
+  height: calc(100% - 206px) !important;
 }
 
 #ews-cubes-panel {
@@ -8,7 +8,7 @@
   background: rgba(29,29,32,.8);
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: 20px;
   margin-right: 20px;
 }
 
