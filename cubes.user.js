@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.1.1
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -180,7 +180,7 @@ function Settings() {
     K.gid('ews-cubes-tab-main').classList.add('loading');
     clickedCubes = [];
     $.when($.getJSON("/1.0/cell/" + tomni.cell + "/heatmap/scythe"))
-    .always(() => {K.gid('ews-cubes-tab-main').classList.remove('loading');});
+    .always(() => K.gid('ews-cubes-tab-main').classList.remove('loading'));
   }
 
   function tabScInfo() {
@@ -201,16 +201,20 @@ function Settings() {
 
       
       potential = tasks.tasks.filter(x => (x.status === 0 || x.status === 11) && x.weight >= 3);
-
       potential = potential.map(x => x.id);
-
       complete = complete.filter(x => x.votes >= 2 && !account.account.admin);
       complete = complete.map(x => x.id);
       potential = potential.filter(x => complete.indexOf(x) === -1);
 
       uid = account.account.uid;
       if (completed && completed.scythe[uid] && completed.scythe[uid].length) {
-        completedByMe = completed.scythe[uid].concat(completed.admin[uid]);
+        // otherwise the concat() function will add "undefined" at the end of the table if the admin table is empty
+        if (completed.admin[uid]) {
+          completedByMe = completed.scythe[uid].concat(completed.admin[uid]);
+        }
+        else {
+          completedByMe = completed.scythe[uid];
+        }
       }
       else {
         completedByMe = [];
@@ -220,7 +224,7 @@ function Settings() {
       clear();
 
       if (potential.length) {
-        potential.forEach((id) => {addCube(id, Cell.ScytheVisionColors.complete1);});
+        potential.forEach(id => addCube(id, Cell.ScytheVisionColors.complete1));
       }
       else {
         K.gid('ews-cubes-container').innerHTML = '<div class="msg">No cubes to SC for you</div>';
@@ -228,7 +232,7 @@ function Settings() {
 
       K.gid('ews-cubes-tab-sc-info').title = 'done: ' + completedByMe.length + ', available: ' + potential.length;
     })
-    .always(() => {K.gid('ews-cubes-tab-sc-info').classList.remove('loading');});
+    .always(() => K.gid('ews-cubes-tab-sc-info').classList.remove('loading'));
   }
 
   let intersection = function (a1, a2) {
@@ -268,14 +272,14 @@ function Settings() {
 
           clear();
           if (result.length) {
-            result.forEach((id) => {addCube(id, Cell.ScytheVisionColors.base);});
+            result.forEach(id => addCube(id, Cell.ScytheVisionColors.base));
           }
           else {
             K.gid('ews-cubes-container').innerHTML = '<div class="msg">No low-weight cubes SC-ed by you</div>';
           }
       })
-      .fail((jqXHR, textStatus, errorThrown) => {console.log(textStatus, errorThrown);})
-      .always(() => {K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading');});
+      .fail((jqXHR, textStatus, errorThrown) => console.log(textStatus, errorThrown))
+      .always(() => K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading'));
   }
 
   function setActiveTab(target) {
@@ -303,14 +307,16 @@ function Settings() {
   function processCubesInMain(duplicates, flagged, frozen, reaped) {
     clear();
 
+    flagged = flagged.filter(id => !reaped.includes(id));
+
     if (!duplicates.length && !flagged.length && !frozen.length) {
       K.gid('ews-cubes-container').innerHTML = '<div class="msg">No flags, duplicates or scythe frozen cubes</div>';
       return;
     }
 
-    duplicates.forEach((id) => {addCube(id, Cell.ScytheVisionColors.duplicate);});
-    flagged.forEach((id) => {if (!reaped.includes(id)) {addCube(id, Cell.ScytheVisionColors.review);}});
-    frozen.forEach((id) => {addCube(id, Cell.ScytheVisionColors.scythefrozen);});
+    duplicates.forEach(id => addCube(id, Cell.ScytheVisionColors.duplicate));
+    flagged.forEach(id => addCube(id, Cell.ScytheVisionColors.review));
+    frozen.forEach(id => addCube(id, Cell.ScytheVisionColors.scythefrozen));
   }
 
   
@@ -439,6 +445,9 @@ function Settings() {
           let r = data.response;
           processCubesInMain(r.duplicate, r.review, r.scythe_frozen, r.reaped.concat(r.scythed));
         }
+      })
+      .on('cell-info-ready-triggered.cubes', function () {
+        K.gid('ews-cubes-tab-main').click();
       });
 
     $('#ews-cubes-container')
