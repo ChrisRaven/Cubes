@@ -12,7 +12,7 @@
 /*jshint esversion: 6 */
 /*globals $, account, tomni, Cell */
 
-let LOCAL = true;
+let LOCAL = false;
 if (LOCAL) {
   console.log('%c--== TURN OFF "LOCAL" BEFORE RELEASING!!! ==--', "color: red; font-style: italic; font-weight: bold;");
 }
