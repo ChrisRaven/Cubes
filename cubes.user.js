@@ -288,7 +288,7 @@ function Settings() {
     K.gid('ews-cubes-container').innerHTML = '';
   }
 
-  function addCube(id, color, borderColor) {
+  function addCube(id, color) {
     let cube = document.createElement('div');
     cube.classList.add('ews-cubes-cube');
     cube.style.backgroundColor = color;
