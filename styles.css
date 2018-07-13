@@ -1,3 +1,63 @@
 .ovlbContainer {
-  height: calc(100% - 186px);
+  height: calc(100% - 186px) !important;
+}
+
+#ews-cubes-panel {
+  width: 280px;
+  height: 150px;
+  background: rgba(29,29,32,.8);
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  margin-right: 20px;
+}
+
+#ews-cubes-panel.hidden {
+  visibility: hidden;
+}
+
+.ews-cubes-tab {
+  display: inline-block;
+  width: 84px;
+  height: 20px;
+  border: 1px solid rgba(60,60,60,.83);
+  color: #e4e1e1;
+  font-size: 13px;
+  text-align: center;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+.ews-cubes-tab:hover {
+  background-color: hsla(0,0%,100%,.11);
+}
+
+.ews-cubes-tab.active {
+  background-color: rgba(115,124,140,.28);
+}
+
+#ews-cubes-container {
+  overflow-y: auto;
+  max-height: 128px;
+}
+
+#ews-cubes-container .msg {
+  color: #e4e1e1;
+  font-size: 13px;
+  text-align: center;
+  font-style: italic;
+  padding-top: 20px;
+}
+
+.ews-cubes-cube {
+  width: 15px;
+  height: 15px;
+  border: 1px solid #bfbfbf;
+  display: inline-block;
+  margin: 2px;
+  cursor: pointer;
+}
+
+.loading {
+  border-color: #49F;
 }
