@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.1.1
+// @version      1.1.2
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -305,8 +305,6 @@ function Settings() {
   }
 
   function processCubesInMain(duplicates, flagged, frozen, reaped) {
-    clear();
-
     flagged = flagged.filter(id => !reaped.includes(id));
 
     if (!duplicates.length && !flagged.length && !frozen.length) {
@@ -314,9 +312,17 @@ function Settings() {
       return;
     }
 
-    duplicates.forEach(id => addCube(id, Cell.ScytheVisionColors.duplicate));
-    flagged.forEach(id => addCube(id, Cell.ScytheVisionColors.review));
-    frozen.forEach(id => addCube(id, Cell.ScytheVisionColors.scythefrozen));
+    // 3054639 - flagged and stashed example
+    $.when($.getJSON("/1.0/cell/" + tomni.cell + "/tasks")).done(function (tasks) {
+      let potential = tasks.tasks;
+      flagged = potential.filter(el => {return flagged.includes(el.id) && el.status !== 6});
+      flagged = flagged.map(el => {return el.id});
+
+      clear();
+      duplicates.forEach(id => addCube(id, Cell.ScytheVisionColors.duplicate));
+      flagged.forEach(id => addCube(id, Cell.ScytheVisionColors.review));
+      frozen.forEach(id => addCube(id, Cell.ScytheVisionColors.scythefrozen));
+    });
   }
 
   
