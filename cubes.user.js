@@ -442,7 +442,7 @@ function Settings() {
       K.addCSSFile('http://127.0.0.1:8887/styles.css');
     }
     else {
-      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css&v=2');
+      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=2');
     }
 
     K.injectJS(`
