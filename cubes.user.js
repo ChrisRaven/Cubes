@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.1.2
+// @version      1.2
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -169,6 +169,7 @@ function Settings() {
     panel.innerHTML = `
       <span class="ews-cubes-tab active" id="ews-cubes-tab-main">main</span>
       <span class="ews-cubes-tab" id="ews-cubes-tab-sc-info">sc-info</span>
+      <span class="ews-cubes-tab" id="ews-cubes-tab-low-wt">low-wt</span>
       <span class="ews-cubes-tab" id="ews-cubes-tab-low-wt-sc">low-wt-sc</span>
       <div id="ews-cubes-container">
       </div>
@@ -238,6 +239,58 @@ function Settings() {
   let intersection = function (a1, a2) {
     return a1.filter(n => a2.includes(n));
   };
+
+  function lowWtColor(wt) {
+    switch (wt) {
+      case 0: return '#FF554D';
+      case 1: return '#46DBE8';
+      case 2: return '#9659FF';
+      case 3: return '#93FF59';
+    }
+  }
+
+  
+  function tabLowWt() {
+    let noCubes = true;
+    clear();
+
+    K.gid('ews-cubes-tab-low-wt').classList.add('loading');
+
+    let processWt = function (wt, frozen, data) {
+      let swt = wt.toString();
+      if (data[swt] && data[swt].length) {
+        let cubes = data[swt].filter(el => {return !frozen.includes(el.task_id)});
+
+        if (cubes.length) {
+          noCubes = false;
+        }
+
+        for (let i = cubes.length - 1; i >= 0; i--) {
+          addCube(cubes[i].task_id, lowWtColor(wt));
+        }
+      }
+    };
+
+    var cellId = tomni.cell;
+
+    $.when($.getJSON("/1.0/cell/" + cellId + "/heatmap/scythe"),
+           $.getJSON("/1.0/cell/" + cellId + "/heatmap/low-weight?weight=3"))
+      .done(function (scytheData, lowWtData) {
+        scytheData = scytheData[0];
+        lowWtData = lowWtData[0];
+
+        for (let i = 0; i < 3; i++) {
+          processWt(i, scytheData.frozen, lowWtData);
+        }
+
+        if (noCubes) {
+          K.gid('ews-cubes-container').innerHTML = '<div class="msg">No low-weight cubes</div>';
+        }
+
+      }).fail((jqXHR, textStatus, errorThrown) => console.log(textStatus, errorThrown))
+      .always(() => K.gid('ews-cubes-tab-low-wt').classList.remove('loading'));
+  }
+
 
   function tabLowWtSc() {
     let cellId = tomni.cell;
@@ -389,7 +442,7 @@ function Settings() {
       K.addCSSFile('http://127.0.0.1:8887/styles.css');
     }
     else {
-      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css');
+      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css&v=2');
     }
 
     K.injectJS(`
@@ -434,6 +487,11 @@ function Settings() {
       tabScInfo();
     });
 
+    K.gid('ews-cubes-tab-low-wt').addEventListener('click', function () {
+      setActiveTab(this);
+      tabLowWt();
+    });
+
     K.gid('ews-cubes-tab-low-wt-sc').addEventListener('click', function () {
       setActiveTab(this);
       tabLowWtSc();
@@ -453,7 +511,9 @@ function Settings() {
         }
       })
       .on('cell-info-ready-triggered.cubes', function () {
-        K.gid('ews-cubes-tab-main').click();
+        if (!tomni.gameMode) {
+          K.gid('ews-cubes-tab-main').click();
+        }
       });
 
     $('#ews-cubes-container')
@@ -466,15 +526,20 @@ function Settings() {
         }
 
         tomni.jumpToTaskID(id);
-        if (activeTab === 'ews-cubes-tab-sc-info') {
-          this.style.backgroundColor = Cell.ScytheVisionColors.complete2;
-        }
-        else if (activeTab === 'ews-cubes-tab-low-wt-sc') {
-          this.style.backgroundColor = Cell.ScytheVisionColors.complete3;
-        }
-        else if (activeTab === 'ews-cubes-tab-main') {
-          clickedCubes.push(id);
-          this.style.borderColor = 'black';
+        switch (activeTab) {
+          case 'ews-cubes-tab-main':
+            clickedCubes.push(id);
+            this.style.borderColor = 'black';
+          break;
+          case 'ews-cubes-tab-sc-info':
+            this.style.backgroundColor = Cell.ScytheVisionColors.complete2;
+            break;
+          case 'ews-cubes-tab-low-wt':
+            this.style.backgroundColor = lowWtColor(3);
+            break;
+          case 'ews-cubes-tab-low-wt-sc':
+            this.style.backgroundColor = Cell.ScytheVisionColors.complete3;
+            break;
         }
       });
 
