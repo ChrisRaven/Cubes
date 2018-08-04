@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.2.1
+// @version      1.3
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -74,6 +74,37 @@ if (LOCAL) {
       }
     }
   };
+
+  // source: https://css-tricks.com/snippets/javascript/lighten-darken-color/
+  function LightenDarkenColor(col, amt) {
+  
+    var usePound = false;
+  
+    if (col[0] == "#") {
+        col = col.slice(1);
+        usePound = true;
+    }
+ 
+    var num = parseInt(col,16);
+ 
+    var r = (num >> 16) + amt;
+ 
+    if (r > 255) r = 255;
+    else if  (r < 0) r = 0;
+ 
+    var b = ((num >> 8) & 0x00FF) + amt;
+ 
+    if (b > 255) b = 255;
+    else if  (b < 0) b = 0;
+ 
+    var g = (num & 0x0000FF) + amt;
+ 
+    if (g > 255) g = 255;
+    else if (g < 0) g = 0;
+ 
+    return (usePound?"#":"") + (g | (b << 8) | (r << 16)).toString(16);
+  
+}
   
 /*
 function Settings() {
@@ -109,7 +140,15 @@ function Settings() {
 
       $.extend(settings, options);
       let storedState = K.ls.get(settings.id);
-      let state = storedState === null ? settings.defaultState : storedState.toLowerCase() === 'true';
+            let state;
+
+      if (storedState === null) {
+        K.ls.set(settings.id, settings.defaultState);
+        state = settings.defaultState;
+      }
+      else {
+        state = storedState.toLowerCase() === 'true';
+      }
 
       target.append(`
         <div class="setting" id="${settings.id}-wrapper">
@@ -166,15 +205,18 @@ function Settings() {
 
     let panel = document.createElement('div');
     panel.id = 'ews-cubes-panel';
-    panel.innerHTML = `
-      <span class="ews-cubes-tab active" id="ews-cubes-tab-main">main</span>
-      <span class="ews-cubes-tab" id="ews-cubes-tab-sc-info">sc-info</span>
-      <span class="ews-cubes-tab" id="ews-cubes-tab-low-wt">low-wt</span>
-      <span class="ews-cubes-tab" id="ews-cubes-tab-low-wt-sc">low-wt-sc</span>
-      <div id="ews-cubes-container">
+    panel.innerHTML = `` +
+      `<span class="ews-cubes-tab active" id="ews-cubes-tab-main">main</span>` +
+      `<span class="ews-cubes-tab" id="ews-cubes-tab-sc-info">scInfo</span>` +
+      `<span class="ews-cubes-tab" id="ews-cubes-tab-low-wt">lowWt</span>` +
+      `<span class="ews-cubes-tab" id="ews-cubes-tab-low-wt-sc">lowWtSc</span>` +
+      `<span class="ews-cubes-tab" id="ews-cubes-tab-debug">debug</span>` +
+      `<div id="ews-cubes-container">
       </div>
     `;
     leaderboard.parentNode.insertBefore(panel, leaderboard.nextElementSibling);
+
+    container = K.gid('ews-cubes-container');
   }
 
   function tabMain() {
@@ -228,7 +270,7 @@ function Settings() {
         potential.forEach(id => addCube(id, Cell.ScytheVisionColors.complete1));
       }
       else {
-        K.gid('ews-cubes-container').innerHTML = '<div class="msg">No cubes to SC for you</div>';
+        container.innerHTML = '<div class="msg">No cubes to SC for you</div>';
       }
 
       K.gid('ews-cubes-tab-sc-info').title = 'done: ' + completedByMe.length + ', available: ' + potential.length;
@@ -252,7 +294,6 @@ function Settings() {
   
   function tabLowWt() {
     let noCubes = true;
-    clear();
 
     K.gid('ews-cubes-tab-low-wt').classList.add('loading');
 
@@ -279,12 +320,14 @@ function Settings() {
         scytheData = scytheData[0];
         lowWtData = lowWtData[0];
 
+        clear();
+
         for (let i = 0; i < 3; i++) {
           processWt(i, scytheData.frozen, lowWtData);
         }
 
         if (noCubes) {
-          K.gid('ews-cubes-container').innerHTML = '<div class="msg">No low-weight cubes</div>';
+          container.innerHTML = '<div class="msg">No low-weight cubes</div>';
         }
 
       }).fail((jqXHR, textStatus, errorThrown) => console.log(textStatus, errorThrown))
@@ -324,25 +367,31 @@ function Settings() {
           let result = intersection(myTasks, ids);
 
           clear();
+
           if (result.length) {
             result.forEach(id => addCube(id, Cell.ScytheVisionColors.base));
           }
           else {
-            K.gid('ews-cubes-container').innerHTML = '<div class="msg">No low-weight cubes SC-ed by you</div>';
+            container.innerHTML = '<div class="msg">No low-weight cubes SC-ed by you</div>';
           }
       })
       .fail((jqXHR, textStatus, errorThrown) => console.log(textStatus, errorThrown))
       .always(() => K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading'));
   }
 
+  function tabDebug() {
+    debug = true;
+  }
+
   function setActiveTab(target) {
     activeTab = target.id;
     $('.ews-cubes-tab').removeClass('active');
     target.classList.add('active');
+    debug = false;
   }
 
   function clear() {
-    K.gid('ews-cubes-container').innerHTML = '';
+    container.innerHTML = '';
   }
 
   function addCube(id, color) {
@@ -350,18 +399,18 @@ function Settings() {
     cube.classList.add('ews-cubes-cube');
     cube.style.backgroundColor = color;
     if (activeTab === 'ews-cubes-tab-main' && clickedCubes.includes(id)) {
-      cube.style.borderColor = 'black';
+      cube.style.backgroundColor = LightenDarkenColor(ColorUtils.rgbToHex(ColorUtils.toRGB(cube.style.backgroundColor)), -50);
     }
     cube.dataset.id = id;
     cube.title = id;
-    K.gid('ews-cubes-container').appendChild(cube);
+    container.appendChild(cube);
   }
 
   function processCubesInMain(duplicates, flagged, frozen, reaped) {
     flagged = flagged.filter(id => !reaped.includes(id));
 
     if (!duplicates.length && !flagged.length && !frozen.length) {
-      K.gid('ews-cubes-container').innerHTML = '<div class="msg">No flags, duplicates or scythe frozen cubes</div>';
+      container.innerHTML = '<div class="msg">No flags, duplicates or scythe frozen cubes</div>';
       return;
     }
 
@@ -434,6 +483,23 @@ function Settings() {
   // let settings;
   let activeTab = 'ews-cubes-tab-main';
   let clickedCubes = [];
+  let debug = false;
+  let container;
+  let compacted;
+
+  
+  function compact(compacted) {
+    if (compacted) {
+      K.gid('ews-cubes-panel').style.height = '52px';
+      K.gid('ews-cubes-container').style.height = '16px';
+      K.qS('.ovlbContainer').style.height = 'calc(100% - 108px)';
+    }
+    else {
+      K.gid('ews-cubes-panel').style.height = '150px';
+      K.gid('ews-cubes-container').style.height = '128px';
+      K.qS('.ovlbContainer').style.height = 'calc(100% - 206px)';
+    }
+  }
 
 
   function main() {
@@ -444,6 +510,8 @@ function Settings() {
     else {
       K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=2');
     }
+
+    compacted = K.ls.get('cubes-compacted') === 'true';
 
     K.injectJS(`
     $(window)
@@ -464,7 +532,7 @@ function Settings() {
         this.addEventListener("readystatechange", function (evt) {
           if (this.readyState == 4 && this.status == 200 && url.indexOf('/heatmap/scythe') !== -1) {
             let cellId = parseInt(url.split('cell/')[1].split('/heatmap')[0], 10);
-            if (cellId === tomni.cell) {
+            if (cellId === parseInt(tomni.cell, 10)) {
               $(document).trigger('scythe-map-updated.cubes', {response: JSON.parse(this.responseText)});
             }
           }
@@ -475,6 +543,7 @@ function Settings() {
   `);
 
     createPanel();
+    compact(compacted);
 
 
     K.gid('ews-cubes-tab-main').addEventListener('click', function () {
@@ -497,6 +566,19 @@ function Settings() {
       tabLowWtSc();
     });
 
+    K.gid('ews-cubes-tab-debug').addEventListener('click', function () {
+      setActiveTab(this);
+      tabDebug();
+    });
+
+
+    $('#ews-cubes-tab-main, #ews-cubes-tab-sc-info, #ews-cubes-tab-low-wt, #ews-cubes-tab-low-wt-sc, #ews-cubes-tab-debug').on('dblclick', function () {
+      compacted = !compacted;
+      compact(compacted);
+      K.ls.set('cubes-compacted', compacted);
+    });
+
+
     $(document)
       .on('cube-enter-triggered.cubes', function () {
         K.gid('ews-cubes-panel').classList.add('hidden');
@@ -514,6 +596,49 @@ function Settings() {
         if (!tomni.gameMode) {
           K.gid('ews-cubes-tab-main').click();
         }
+      })
+      .on('mousemove', function () {
+        if (!debug) {
+          return;
+        }
+        
+        let html = '';
+
+        var c = tomni.center.rotation;
+        c = c.clone().multiplyScalar(100).round().multiplyScalar(1 / 100).floor();
+        c = [c.x, c.y, c.z];
+
+        html += '<table id="ews-debug-table">'
+        html += '<tr><td>Cell: </td><td>' + tomni.cell + '</td></tr>';
+        html += '<tr><td>Center: </td><td>' + '&lt;' + c.join(", ") + '&gt;</td></tr>';
+        html += '<tr><td>Cube ID: </td><td>' + (tomni.task ? tomni.task.id : 'null') + '</td></tr>';
+        html += '<tr><td>Last seg: </td><td>' + (tomni.lastClicked || 'null') + '</td></tr>';
+        html += '</table>';
+
+        container.innerHTML = html;
+      });
+
+      K.gid('notificationHistoryButton').addEventListener('click', function () {
+        if (this.classList.contains('opened')) {
+          this.classList.remove('opened');
+        }
+        else {
+          this.classList.add('opened');
+        }
+      })
+
+      $('#settingsButton, #notificationHistoryButton, #menu, #helpButton').click(function () {
+        let hide = $('#settingsMenu').is(':visible') ||
+          K.gid('notificationHistoryButton').classList.contains('opened') ||
+          K.gid('linkMenu').classList.contains('slideDown') ||
+          $('#helpMenu').is(':visible');
+
+        if (hide) {
+          $('#ews-cubes-panel').hide();
+        }
+        else {
+          $('#ews-cubes-panel').show();
+        }
       });
 
     $('#ews-cubes-container')
@@ -529,7 +654,7 @@ function Settings() {
         switch (activeTab) {
           case 'ews-cubes-tab-main':
             clickedCubes.push(id);
-            this.style.borderColor = 'black';
+            this.style.backgroundColor = LightenDarkenColor(ColorUtils.rgbToHex(ColorUtils.toRGB(this.style.backgroundColor)), -50);
           break;
           case 'ews-cubes-tab-sc-info':
             this.style.backgroundColor = Cell.ScytheVisionColors.complete2;

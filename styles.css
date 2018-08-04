@@ -1,5 +1,5 @@
 .ovlbContainer {
-  height: calc(100% - 206px) !important;
+  height: calc(100% - 206px);
 }
 
 #ews-cubes-panel {
@@ -10,6 +10,7 @@
   right: 0;
   bottom: 20px;
   margin-right: 20px;
+  border-radius: 8px;
 }
 
 #ews-cubes-panel.hidden {
@@ -18,9 +19,10 @@
 
 .ews-cubes-tab {
   display: inline-block;
-  width: 62px;
+  width: 52px;
   height: 20px;
   border: 1px solid rgba(60,60,60,.83);
+  border-radius: 2px;
   color: #e4e1e1;
   font-size: 13px;
   text-align: center;
@@ -38,7 +40,7 @@
 
 #ews-cubes-container {
   overflow-y: auto;
-  max-height: 128px;
+  height: 128px;
 }
 
 #ews-cubes-container .msg {
@@ -52,12 +54,30 @@
 .ews-cubes-cube {
   width: 15px;
   height: 15px;
-  border: 1px solid #bfbfbf;
   display: inline-block;
-  margin: 2px;
+  margin: 1px 2px;
   cursor: pointer;
+  border-radius: 2px;
 }
 
 .loading {
   border-color: #49F;
+}
+
+#ews-debug-table {
+  font-size: 10pt;
+  color: #e4e1e1;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+#ews-debug-table tr td:nth-child(1) {
+  font-weight: 400;
+  text-align: right;
+  padding-right: 10px;
+  color: white;
+}
+
+#ews-debug-table tr td:nth-child(2) {
+  color: #ccc;
 }
