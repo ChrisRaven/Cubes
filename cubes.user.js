@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.3.1
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -486,18 +486,27 @@ function Settings() {
   let debug = false;
   let container;
   let compacted;
+  let compactedCSS;
 
   
   function compact(compacted) {
+    if (!compactedCSS) {
+      compactedCSS = document.createElement('style');
+      compactedCSS.type = 'text/css';
+      document.head.appendChild(compactedCSS);
+    }
+
     if (compacted) {
       K.gid('ews-cubes-panel').style.height = '52px';
       K.gid('ews-cubes-container').style.height = '16px';
       K.qS('.ovlbContainer').style.height = 'calc(100% - 108px)';
+      compactedCSS.innerHTML = '#ews-cubes-container .msg { padding-top: 0; }';
     }
     else {
       K.gid('ews-cubes-panel').style.height = '150px';
       K.gid('ews-cubes-container').style.height = '128px';
       K.qS('.ovlbContainer').style.height = 'calc(100% - 206px)';
+      compactedCSS.innerHTML = '#ews-cubes-container .msg { padding-top: 20px; }';
     }
   }
 
