@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.3.1
+// @version      1.3.2
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -500,13 +500,13 @@ function Settings() {
       K.gid('ews-cubes-panel').style.height = '52px';
       K.gid('ews-cubes-container').style.height = '16px';
       K.qS('.ovlbContainer').style.height = 'calc(100% - 108px)';
-      compactedCSS.innerHTML = '#ews-cubes-container .msg { padding-top: 0; }';
+      compactedCSS.innerHTML = '#ews-cubes-container .msg { padding-top: 0; margin-top: -2px; }';
     }
     else {
       K.gid('ews-cubes-panel').style.height = '150px';
       K.gid('ews-cubes-container').style.height = '128px';
       K.qS('.ovlbContainer').style.height = 'calc(100% - 206px)';
-      compactedCSS.innerHTML = '#ews-cubes-container .msg { padding-top: 20px; }';
+      compactedCSS.innerHTML = '#ews-cubes-container .msg { padding-top: 20px; margin-top: 0; }';
     }
   }
 
@@ -625,7 +625,17 @@ function Settings() {
         html += '</table>';
 
         container.innerHTML = html;
-      });
+      })
+      .on('click', '#dismiss-leaderboard', function () {
+        if (compacted) {
+          compact(!compacted);
+        }
+      })
+      .on('click', '#recall-leaderboard', function () {
+        if (compacted) {
+          compact(compacted);
+        }
+      })
 
       K.gid('notificationHistoryButton').addEventListener('click', function () {
         if (this.classList.contains('opened')) {
