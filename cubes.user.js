@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.3.2
+// @version      1.3.3
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -637,22 +637,34 @@ function Settings() {
         }
       })
 
-      K.gid('notificationHistoryButton').addEventListener('click', function () {
-        if (this.classList.contains('opened')) {
-          this.classList.remove('opened');
+      function markOpenedPanel(id) {
+        K.gid('notificationHistoryButton').classList.remove('opened');
+        K.gid('menu').classList.remove('opened');
+        K.gid('settingsButton').classList.remove('opened');
+        K.gid('helpButton').classList.remove('opened');
+        if (id) {
+          K.gid(id).classList.add('opened');
         }
-        else {
-          this.classList.add('opened');
-        }
-      })
+      }
+
+      function isAnyPanelOpened() {
+        return K.gid('notificationHistoryButton').classList.contains('opened') ||
+          K.gid('menu').classList.contains('opened') ||
+          K.gid('settingsButton').classList.contains('opened') ||
+          K.gid('helpButton').classList.contains('opened');
+      }
 
       $('#settingsButton, #notificationHistoryButton, #menu, #helpButton').click(function () {
-        let hide = $('#settingsMenu').is(':visible') ||
-          K.gid('notificationHistoryButton').classList.contains('opened') ||
-          K.gid('linkMenu').classList.contains('slideDown') ||
-          $('#helpMenu').is(':visible');
+        let id;
+        if (K.gid(this.id).classList.contains('opened')) {
+          id = null
+        }
+        else {
+          id = this.id;
+        }
+        markOpenedPanel(id);
 
-        if (hide) {
+        if (isAnyPanelOpened()) {
           $('#ews-cubes-panel').hide();
         }
         else {
@@ -687,6 +699,12 @@ function Settings() {
         }
       });
 
+      document.addEventListener('click', function () {
+        if (isAnyPanelOpened()) {
+          markOpenedPanel(null);
+          $('#ews-cubes-panel').show();
+        }
+      });
   }
 
   let intv = setInterval(function () {
