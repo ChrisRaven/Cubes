@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.3.3
+// @version      1.4
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -106,7 +106,7 @@ if (LOCAL) {
   
 }
   
-/*
+
 function Settings() {
     let target;
     
@@ -197,7 +197,7 @@ function Settings() {
       return val;
     };
   }
-*/
+
 
 
   function createPanel() {
@@ -406,7 +406,7 @@ function Settings() {
     container.appendChild(cube);
   }
 
-  function processCubesInMain(duplicates, flagged, frozen, reaped) {
+  function processCubesInMain(duplicates, flagged, scytheFrozen, reaped, frozen) {
     flagged = flagged.filter(id => !reaped.includes(id));
 
     if (!duplicates.length && !flagged.length && !frozen.length) {
@@ -423,7 +423,10 @@ function Settings() {
       clear();
       duplicates.forEach(id => addCube(id, Cell.ScytheVisionColors.duplicate));
       flagged.forEach(id => addCube(id, Cell.ScytheVisionColors.review));
-      frozen.forEach(id => addCube(id, Cell.ScytheVisionColors.scythefrozen));
+      scytheFrozen.forEach(id => addCube(id, Cell.ScytheVisionColors.scythefrozen));
+      if (settings.getValue('show-admin-frozen-cubes')) {
+        frozen.forEach(id => addCube(id, Cell.ScytheVisionColors.frozen));
+      }
     });
   }
 
@@ -487,6 +490,7 @@ function Settings() {
   let container;
   let compacted;
   let compactedCSS;
+  let settings;
 
   
   function compact(compacted) {
@@ -554,6 +558,15 @@ function Settings() {
     createPanel();
     compact(compacted);
 
+    settings = new Settings();
+    settings.addCategory();
+    settings.addOption({
+      name: 'Show admin frozen cubes',
+      id: 'show-admin-frozen-cubes',
+      defaultState: false,
+      indented: false
+    });
+
 
     K.gid('ews-cubes-tab-main').addEventListener('click', function () {
       setActiveTab(this);
@@ -598,7 +611,7 @@ function Settings() {
       .on('scythe-map-updated.cubes', function (evt, data) {
         if (activeTab === 'ews-cubes-tab-main') {
           let r = data.response;
-          processCubesInMain(r.duplicate, r.review, r.scythe_frozen, r.reaped.concat(r.scythed));
+          processCubesInMain(r.duplicate, r.review, r.scythe_frozen, r.reaped.concat(r.scythed), r.frozen);
         }
       })
       .on('cell-info-ready-triggered.cubes', function () {
@@ -705,6 +718,8 @@ function Settings() {
           $('#ews-cubes-panel').show();
         }
       });
+
+
   }
 
   let intv = setInterval(function () {
