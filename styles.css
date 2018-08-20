@@ -81,3 +81,10 @@
 #ews-debug-table tr td:nth-child(2) {
   color: #ccc;
 }
+
+.ews-cubes-low-wt-sc-counter {
+  font-size: 8px;
+  color: #999;
+  display: inline-block;
+  width: 10px;
+}

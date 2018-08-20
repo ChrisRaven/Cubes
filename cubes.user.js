@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -62,7 +62,17 @@ if (LOCAL) {
     // localStorage
     ls: {
       get: function (key) {
-        return localStorage.getItem(account.account.uid + '-ews-' + key);
+        let item = localStorage.getItem(account.account.uid + '-ews-' + key);
+        if (item) {
+          if (item === 'true') {
+            return true;
+          }
+          if (item === 'false') {
+            return false;
+          }
+        }
+
+        return item;
       },
 
       set: function (key, val) {
@@ -147,7 +157,7 @@ function Settings() {
         state = settings.defaultState;
       }
       else {
-        state = storedState.toLowerCase() === 'true';
+        state = storedState;
       }
 
       target.append(`
@@ -187,12 +197,6 @@ function Settings() {
       if (val === null) {
         return undefined;
       }
-      if (val.toLowerCase() === 'true') {
-        return true;
-      }
-      if (val.toLowerCase() === 'false') {
-        return false;
-      }
 
       return val;
     };
@@ -224,6 +228,13 @@ function Settings() {
     clickedCubes = [];
     $.when($.getJSON("/1.0/cell/" + tomni.cell + "/heatmap/scythe"))
     .always(() => K.gid('ews-cubes-tab-main').classList.remove('loading'));
+    K.gid('ews-cubes-container').innerHTML = '<div id="main-main-cubes"></div><div id="main-lowwtsc-cubes"></div>';
+    if (showLowWtScInMain) {
+      tabLowWtSc('main-lowwtsc-cubes');
+    }
+    else {
+      emptyMainMessage();
+    }
   }
 
   function tabScInfo() {
@@ -335,10 +346,13 @@ function Settings() {
   }
 
 
-  function tabLowWtSc() {
+  function tabLowWtSc(target) {
     let cellId = tomni.cell;
 
-    K.gid('ews-cubes-tab-low-wt-sc').classList.add('loading');
+    if (!target) {
+      K.gid('ews-cubes-tab-low-wt-sc').classList.add('loading');
+    }
+
     $.when($.getJSON("/1.0/cell/" + cellId + "/heatmap/low-weight?weight=3"),
           $.getJSON("/1.0/cell/" + cellId + "/tasks/complete/player"),
           $.getJSON("/1.0/cell/" + cellId + "/heatmap/scythe"))
@@ -366,17 +380,28 @@ function Settings() {
 
           let result = intersection(myTasks, ids);
 
-          clear();
-
-          if (result.length) {
-            result.forEach(id => addCube(id, Cell.ScytheVisionColors.base));
+          if (target) {
+            clear('main-lowwtsc-cubes');
           }
           else {
-            container.innerHTML = '<div class="msg">No low-weight cubes SC-ed by you</div>';
+            clear();
           }
+
+          if (result.length) {
+            result.forEach(id => addCube(id, Cell.ScytheVisionColors.base, target ? 'main-lowwtsc-cubes' : ''));
+          }
+          else {
+            if (target) {
+              emptyMainMessage();
+            }
+            else {
+              container.innerHTML = '<div class="msg">No low-weight cubes SC-ed by you</div>';
+            }
+          }
+
       })
       .fail((jqXHR, textStatus, errorThrown) => console.log(textStatus, errorThrown))
-      .always(() => K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading'));
+      .always(() => { if (!target) {K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading')}});
   }
 
   function tabDebug() {
@@ -390,11 +415,16 @@ function Settings() {
     debug = false;
   }
 
-  function clear() {
-    container.innerHTML = '';
+  function clear(subcontainer) {
+    if (subcontainer) {
+      K.gid(subcontainer).innerHTML = '';
+    }
+    else {
+      container.innerHTML = '';
+    }
   }
 
-  function addCube(id, color) {
+  function addCube(id, color, subcontainer) {
     let cube = document.createElement('div');
     cube.classList.add('ews-cubes-cube');
     cube.style.backgroundColor = color;
@@ -403,14 +433,24 @@ function Settings() {
     }
     cube.dataset.id = id;
     cube.title = id;
-    container.appendChild(cube);
+    if (subcontainer) {
+      K.gid(subcontainer).appendChild(cube);
+    }
+    else {
+      container.appendChild(cube);
+    }
+  }
+
+  function emptyMainMessage() {
+    if (!K.qS('.ews-cubes-cube')) {
+      K.gid('main-main-cubes').innerHTML = '<div class="msg">No flags, duplicates or ' + (showAdminFrozenCubes ? '' : 'scythe ') + 'frozen cubes</div>';
+    }
   }
 
   function processCubesInMain(duplicates, flagged, scytheFrozen, reaped, frozen) {
     flagged = flagged.filter(id => !reaped.includes(id));
 
-    if (!duplicates.length && !flagged.length && !frozen.length) {
-      container.innerHTML = '<div class="msg">No flags, duplicates or scythe frozen cubes</div>';
+    if (!duplicates.length && !flagged.length && !scytheFrozen.length && !(showAdminFrozenCubes && frozen.length)) {
       return;
     }
 
@@ -420,13 +460,14 @@ function Settings() {
       flagged = potential.filter(el => {return flagged.includes(el.id) && el.status !== 6});
       flagged = flagged.map(el => {return el.id});
 
-      clear();
-      duplicates.forEach(id => addCube(id, Cell.ScytheVisionColors.duplicate));
-      flagged.forEach(id => addCube(id, Cell.ScytheVisionColors.review));
-      scytheFrozen.forEach(id => addCube(id, Cell.ScytheVisionColors.scythefrozen));
-      if (settings.getValue('show-admin-frozen-cubes')) {
-        frozen.forEach(id => addCube(id, Cell.ScytheVisionColors.frozen));
+      clear('main-main-cubes');
+      duplicates.forEach(id => addCube(id, Cell.ScytheVisionColors.duplicate, 'main-main-cubes'));
+      flagged.forEach(id => addCube(id, Cell.ScytheVisionColors.review, 'main-main-cubes'));
+      scytheFrozen.forEach(id => addCube(id, Cell.ScytheVisionColors.scythefrozen, 'main-main-cubes'));
+      if (showAdminFrozenCubes) {
+        frozen.forEach(id => addCube(id, Cell.ScytheVisionColors.frozen, 'main-main-cubes'));
       }
+      emptyMainMessage();
     });
   }
 
@@ -483,7 +524,6 @@ function Settings() {
     document.body.removeChild(textArea);
   }
 
-  // let settings;
   let activeTab = 'ews-cubes-tab-main';
   let clickedCubes = [];
   let debug = false;
@@ -491,6 +531,8 @@ function Settings() {
   let compacted;
   let compactedCSS;
   let settings;
+  let showAdminFrozenCubes;
+  let showLowWtScInMain;
 
   
   function compact(compacted) {
@@ -516,15 +558,16 @@ function Settings() {
 
 
   function main() {
-    // settings = new Settings();
     if (LOCAL) {
       K.addCSSFile('http://127.0.0.1:8887/styles.css');
     }
     else {
-      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=2');
+      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=3');
     }
 
-    compacted = K.ls.get('cubes-compacted') === 'true';
+    compacted = K.ls.get('cubes-compacted');
+    showLowWtScInMain = K.ls.get('show-lowwtsc-in-main-tab');
+    showAdminFrozenCubes = K.ls.get('show-admin-frozen-cubes');
 
     K.injectJS(`
     $(window)
@@ -563,9 +606,42 @@ function Settings() {
     settings.addOption({
       name: 'Show admin frozen cubes',
       id: 'show-admin-frozen-cubes',
-      defaultState: false,
-      indented: false
+      defaultState: false
     });
+    settings.addOption({
+      name: 'Show lowWtSc in Main tab',
+      id: 'show-lowwtsc-in-main-tab',
+      defaultState: false
+    });
+
+    $(document).on('ews-setting-changed', function (evt, data) {
+      switch (data.setting) {
+        case 'show-lowwtsc-in-main-tab':
+          showLowWtScInMain = data.state;
+          break;
+        case 'show-admin-frozen-cubes':
+          showAdminFrozenCubes = data.state;
+          break;
+      }
+    });
+
+    let lowWtCounter = 15;
+
+    setInterval(function () {
+      if (showLowWtScInMain && activeTab === 'ews-cubes-tab-main') {
+        if (!lowWtCounter--) {
+          lowWtCounter = 15;
+          tabLowWtSc('main-lowwtsc-cubes');
+        }
+        else {
+          K.gid('ews-cubes-tab-main').innerHTML = 'main <span class="ews-cubes-low-wt-sc-counter">' + lowWtCounter + '</span>';
+        }
+      }
+      else {
+        K.gid('ews-cubes-tab-main').innerHTML = 'main';
+      }
+      
+    }, 1000);
 
 
     K.gid('ews-cubes-tab-main').addEventListener('click', function () {
@@ -697,8 +773,13 @@ function Settings() {
         tomni.jumpToTaskID(id);
         switch (activeTab) {
           case 'ews-cubes-tab-main':
-            clickedCubes.push(id);
-            this.style.backgroundColor = LightenDarkenColor(ColorUtils.rgbToHex(ColorUtils.toRGB(this.style.backgroundColor)), -50);
+            if (this.parentNode.id === 'main-main-cubes') {
+              clickedCubes.push(id);
+              this.style.backgroundColor = LightenDarkenColor(ColorUtils.rgbToHex(ColorUtils.toRGB(this.style.backgroundColor)), -50);
+            }
+            else {
+              this.style.backgroundColor = Cell.ScytheVisionColors.complete3;
+            }
           break;
           case 'ews-cubes-tab-sc-info':
             this.style.backgroundColor = Cell.ScytheVisionColors.complete2;
