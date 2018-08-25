@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.5.1
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -451,6 +451,8 @@ function Settings() {
     flagged = flagged.filter(id => !reaped.includes(id));
 
     if (!duplicates.length && !flagged.length && !scytheFrozen.length && !(showAdminFrozenCubes && frozen.length)) {
+      clear('main-main-cubes');
+      emptyMainMessage();
       return;
     }
 
