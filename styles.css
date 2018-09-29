@@ -88,3 +88,11 @@
   display: inline-block;
   width: 10px;
 }
+
+.ews-cubes-hidden-tab {
+  display: none !important;
+}
+
+.ews-cubes-wide-tab {
+  width: 66px !important;
+}

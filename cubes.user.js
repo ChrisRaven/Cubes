@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.5.1
+// @version      1.5.2
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -564,7 +564,7 @@ function Settings() {
       K.addCSSFile('http://127.0.0.1:8887/styles.css');
     }
     else {
-      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=3');
+      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=4');
     }
 
     compacted = K.ls.get('cubes-compacted');
@@ -603,6 +603,19 @@ function Settings() {
     createPanel();
     compact(compacted);
 
+    
+    $(document).on('ews-setting-changed', function (evt, data) {
+      switch (data.setting) {
+        case 'show-lowwtsc-in-main-tab':
+          showLowWtScInMain = data.state;
+          changeVisibilityOfTabLowWtSc(data.state);
+          break;
+        case 'show-admin-frozen-cubes':
+          showAdminFrozenCubes = data.state;
+          break;
+      }
+    });
+
     settings = new Settings();
     settings.addCategory();
     settings.addOption({
@@ -616,16 +629,16 @@ function Settings() {
       defaultState: false
     });
 
-    $(document).on('ews-setting-changed', function (evt, data) {
-      switch (data.setting) {
-        case 'show-lowwtsc-in-main-tab':
-          showLowWtScInMain = data.state;
-          break;
-        case 'show-admin-frozen-cubes':
-          showAdminFrozenCubes = data.state;
-          break;
-      }
-    });
+
+    function changeVisibilityOfTabLowWtSc(state) {
+      K.gid('ews-cubes-tab-low-wt-sc').classList.toggle('ews-cubes-hidden-tab', state);
+
+      K.gid('ews-cubes-tab-main').classList.toggle('ews-cubes-wide-tab', state);
+      K.gid('ews-cubes-tab-sc-info').classList.toggle('ews-cubes-wide-tab', state);
+      K.gid('ews-cubes-tab-low-wt').classList.toggle('ews-cubes-wide-tab', state);
+      K.gid('ews-cubes-tab-debug').classList.toggle('ews-cubes-wide-tab', state);
+    }
+
 
     let lowWtCounter = 15;
 
