@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.5.2
+// @version      1.6
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -9,8 +9,8 @@
 // @downloadURL  https://raw.githubusercontent.com/ChrisRaven/EyeWire-Cubes/master/cubes.user.js
 // ==/UserScript==
 
-/*jshint esversion: 6 */
-/*globals $, account, tomni, Cell */
+/*jshint esversion: 6, bitwise: false */
+/*globals $, account, tomni, Cell, ColorUtils */
 
 let LOCAL = false;
 if (LOCAL) {
@@ -200,6 +200,13 @@ function Settings() {
 
       return val;
     };
+
+    this.setValue = function (optionId, newState) {
+      K.ls.set(optionId, newState);
+      K.qS('#hide-my-reaps-in-forts-wrapper > div').classList.toggle('on', newState);
+      K.qS('#hide-my-reaps-in-forts-wrapper > div').classList.toggle('off', !newState);
+      K.gid('hide-my-reaps-in-forts').checked = newState;
+    };
   }
 
 
@@ -242,18 +249,29 @@ function Settings() {
 
     K.gid('ews-cubes-tab-sc-info').classList.add('loading');
     $.when(
-      $.getJSON("/1.0/cell/" + cellId + "/tasks"),
-      $.getJSON("/1.0/cell/" + cellId + "/heatmap/scythe"),
-      $.getJSON("/1.0/cell/" + cellId + "/tasks/complete/player")
+      $.getJSON('/1.0/cell/' + cellId + '/tasks'),
+      $.getJSON('/1.0/cell/' + cellId + '/heatmap/scythe'),
+      $.getJSON('/1.0/cell/' + cellId + '/tasks/complete/player'),
+      hideMyReapsInForts && isFort ? $.getJSON('/1.0/task?dataset=1&cell=' + cellId + '&min_weight=3') : null
     )
-    .done(function (tasks, scythe, completed) {
-      let potential, complete, uid, completedByMe;
+    .done(function (tasks, scythe, completed, players) {
+      let potential, complete, uid, completedByMe, myCubes;
 
       tasks = tasks[0];
       complete = scythe[0].complete || [];
       completed = completed[0];
 
-      
+      if (hideMyReapsInForts && isFort) {
+        // source: https://stackoverflow.com/a/34398349
+        myCubes = players[0].reduce((result, cube) => {
+          if (cube.users.split(',').indexOf(account.account.username) !== -1) {
+            result.push(cube.id);
+          }
+
+          return result;
+        }, []);
+      }
+
       potential = tasks.tasks.filter(x => (x.status === 0 || x.status === 11) && x.weight >= 3);
       potential = potential.map(x => x.id);
       complete = complete.filter(x => x.votes >= 2 && !account.account.admin);
@@ -274,6 +292,10 @@ function Settings() {
         completedByMe = [];
       }
       potential = potential.filter(x => completedByMe.indexOf(x) === -1);
+
+      if (hideMyReapsInForts && isFort) {
+        potential = potential.filter(x => myCubes.indexOf(x) === -1);
+      }
 
       clear();
 
@@ -311,7 +333,7 @@ function Settings() {
     let processWt = function (wt, frozen, data) {
       let swt = wt.toString();
       if (data[swt] && data[swt].length) {
-        let cubes = data[swt].filter(el => {return !frozen.includes(el.task_id)});
+        let cubes = data[swt].filter(el => !frozen.includes(el.task_id));
 
         if (cubes.length) {
           noCubes = false;
@@ -401,7 +423,7 @@ function Settings() {
 
       })
       .fail((jqXHR, textStatus, errorThrown) => console.log(textStatus, errorThrown))
-      .always(() => { if (!target) {K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading')}});
+      .always(() => { if (!target) {K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading');}});
   }
 
   function tabDebug() {
@@ -459,8 +481,8 @@ function Settings() {
     // 3054639 - flagged and stashed example
     $.when($.getJSON("/1.0/cell/" + tomni.cell + "/tasks")).done(function (tasks) {
       let potential = tasks.tasks;
-      flagged = potential.filter(el => {return flagged.includes(el.id) && el.status !== 6});
-      flagged = flagged.map(el => {return el.id});
+      flagged = potential.filter(el => flagged.includes(el.id) && el.status !== 6);
+      flagged = flagged.map(el => el.id);
 
       clear('main-main-cubes');
       duplicates.forEach(id => addCube(id, Cell.ScytheVisionColors.duplicate, 'main-main-cubes'));
@@ -535,6 +557,8 @@ function Settings() {
   let settings;
   let showAdminFrozenCubes;
   let showLowWtScInMain;
+  let hideMyReapsInForts;
+  let isFort;
 
   
   function compact(compacted) {
@@ -613,6 +637,9 @@ function Settings() {
         case 'show-admin-frozen-cubes':
           showAdminFrozenCubes = data.state;
           break;
+        case 'hide-my-reaps-in-forts':
+          hideMyReapsInForts = data.state;
+          K.gid('ews-cubes-tab-sc-info').style.color = hideMyReapsInForts && isFort ? '#00c4ff' : '#e4e1e1';
       }
     });
 
@@ -626,6 +653,11 @@ function Settings() {
     settings.addOption({
       name: 'Show lowWtSc in Main tab',
       id: 'show-lowwtsc-in-main-tab',
+      defaultState: false
+    });
+    settings.addOption({
+      name: 'Hide my reaps in forts',
+      id: 'hide-my-reaps-in-forts',
       defaultState: false
     });
 
@@ -644,7 +676,7 @@ function Settings() {
 
     setInterval(function () {
       if (showLowWtScInMain && activeTab === 'ews-cubes-tab-main') {
-        if (!lowWtCounter--) {
+        if (!(lowWtCounter--)) {
           lowWtCounter = 15;
           tabLowWtSc('main-lowwtsc-cubes');
         }
@@ -709,6 +741,8 @@ function Settings() {
         if (!tomni.gameMode) {
           K.gid('ews-cubes-tab-main').click();
         }
+        isFort = !!tomni.getCurrentCell().info.tags.ScytheFort;
+        K.gid('ews-cubes-tab-sc-info').style.color = hideMyReapsInForts && isFort ? '#00c4ff' : '#e4e1e1';
       })
       .on('mousemove', function () {
         if (!debug) {
@@ -721,7 +755,7 @@ function Settings() {
         c = c.clone().multiplyScalar(100).round().multiplyScalar(1 / 100).floor();
         c = [c.x, c.y, c.z];
 
-        html += '<table id="ews-debug-table">'
+        html += '<table id="ews-debug-table">';
         html += '<tr><td>Cell: </td><td>' + tomni.cell + '</td></tr>';
         html += '<tr><td>Center: </td><td>' + '&lt;' + c.join(", ") + '&gt;</td></tr>';
         html += '<tr><td>Cube ID: </td><td>' + (tomni.task ? tomni.task.id : 'null') + '</td></tr>';
@@ -740,6 +774,13 @@ function Settings() {
           compact(compacted);
         }
       })
+      .on('contextmenu', '#ews-cubes-tab-sc-info', function (evt) {
+        evt.preventDefault();
+        hideMyReapsInForts = !hideMyReapsInForts;
+        settings.setValue('hide-my-reaps-in-forts', hideMyReapsInForts);
+        this.style.color = hideMyReapsInForts && isFort ? '#00c4ff' : '#e4e1e1';
+        this.click();
+      });
 
       function markOpenedPanel(id) {
         K.gid('notificationHistoryButton').classList.remove('opened');
@@ -761,7 +802,7 @@ function Settings() {
       $('#settingsButton, #notificationHistoryButton, #menu, #helpButton').click(function () {
         let id;
         if (K.gid(this.id).classList.contains('opened')) {
-          id = null
+          id = null;
         }
         else {
           id = this.id;
