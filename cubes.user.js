@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.7.1
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -114,10 +114,10 @@ if (LOCAL) {
  
     return (usePound?"#":"") + (g | (b << 8) | (r << 16)).toString(16);
   
-}
+  }
   
 
-function Settings() {
+  function Settings() {
     let target;
     
     this.setTarget = function (selector) {
@@ -200,13 +200,6 @@ function Settings() {
 
       return val;
     };
-
-    this.setValue = function (optionId, newState) {
-      K.ls.set(optionId, newState);
-      K.qS('#hide-my-reaps-in-forts-wrapper > div').classList.toggle('on', newState);
-      K.qS('#hide-my-reaps-in-forts-wrapper > div').classList.toggle('off', !newState);
-      K.gid('hide-my-reaps-in-forts').checked = newState;
-    };
   }
 
 
@@ -251,26 +244,14 @@ function Settings() {
     $.when(
       $.getJSON('/1.0/cell/' + cellId + '/tasks'),
       $.getJSON('/1.0/cell/' + cellId + '/heatmap/scythe'),
-      $.getJSON('/1.0/cell/' + cellId + '/tasks/complete/player'),
-      hideMyReapsInForts && isFort ? $.getJSON('/1.0/task?dataset=1&cell=' + cellId + '&min_weight=3') : null
+      $.getJSON('/1.0/cell/' + cellId + '/tasks/complete/player')
     )
-    .done(function (tasks, scythe, completed, players) {
-      let potential, complete, uid, completedByMe, myCubes;
+    .done(function (tasks, scythe, completed) {
+      let potential, complete, uid, completedByMe;
 
       tasks = tasks[0];
       complete = scythe[0].complete || [];
       completed = completed[0];
-
-      if (hideMyReapsInForts && isFort) {
-        // source: https://stackoverflow.com/a/34398349
-        myCubes = players[0].reduce((result, cube) => {
-          if (cube.users.split(',').indexOf(account.account.username) !== -1) {
-            result.push(cube.id);
-          }
-
-          return result;
-        }, []);
-      }
 
       potential = tasks.tasks.filter(x => (x.status === 0 || x.status === 11) && x.weight >= 3);
       potential = potential.map(x => x.id);
@@ -297,7 +278,7 @@ function Settings() {
         if (votes1.indexOf(x) === -1) {
           votes0.push(x);
         }
-      })
+      });
 
       votes0.push(...votes1);
       potential = votes0;
@@ -320,10 +301,6 @@ function Settings() {
         completedByMe = [];
       }
       potential = potential.filter(x => completedByMe.indexOf(x) === -1);
-
-      if (hideMyReapsInForts && isFort) {
-        potential = potential.filter(x => myCubes.indexOf(x) === -1);
-      }
 
       clear();
 
@@ -585,8 +562,6 @@ function Settings() {
   let settings;
   let showAdminFrozenCubes;
   let showLowWtScInMain;
-  let hideMyReapsInForts;
-  let isFort;
 
   
   function compact(compacted) {
@@ -665,9 +640,6 @@ function Settings() {
         case 'show-admin-frozen-cubes':
           showAdminFrozenCubes = data.state;
           break;
-        case 'hide-my-reaps-in-forts':
-          hideMyReapsInForts = data.state;
-          K.gid('ews-cubes-tab-sc-info').style.color = hideMyReapsInForts && isFort ? '#00c4ff' : '#e4e1e1';
       }
     });
 
@@ -681,11 +653,6 @@ function Settings() {
     settings.addOption({
       name: 'Show lowWtSc in Main tab',
       id: 'show-lowwtsc-in-main-tab',
-      defaultState: false
-    });
-    settings.addOption({
-      name: 'Hide my reaps in forts',
-      id: 'hide-my-reaps-in-forts',
       defaultState: false
     });
 
@@ -769,8 +736,6 @@ function Settings() {
         if (!tomni.gameMode) {
           K.gid('ews-cubes-tab-main').click();
         }
-        isFort = !!tomni.getCurrentCell().info.tags.ScytheFort;
-        K.gid('ews-cubes-tab-sc-info').style.color = hideMyReapsInForts && isFort ? '#00c4ff' : '#e4e1e1';
       })
       .on('mousemove', function () {
         if (!debug) {
@@ -801,14 +766,8 @@ function Settings() {
         if (compacted) {
           compact(compacted);
         }
-      })
-      .on('contextmenu', '#ews-cubes-tab-sc-info', function (evt) {
-        evt.preventDefault();
-        hideMyReapsInForts = !hideMyReapsInForts;
-        settings.setValue('hide-my-reaps-in-forts', hideMyReapsInForts);
-        this.style.color = hideMyReapsInForts && isFort ? '#00c4ff' : '#e4e1e1';
-        this.click();
       });
+
 
       function markOpenedPanel(id) {
         K.gid('notificationHistoryButton').classList.remove('opened');
