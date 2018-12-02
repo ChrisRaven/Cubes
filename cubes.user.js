@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.7.1
+// @version      1.7.2
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -280,6 +280,7 @@ if (LOCAL) {
         }
       });
 
+      let votes0Length = votes0.length;
       votes0.push(...votes1);
       potential = votes0;
 
@@ -305,7 +306,7 @@ if (LOCAL) {
       clear();
 
       if (potential.length) {
-        potential.forEach(id => addCube(id, Cell.ScytheVisionColors.complete1));
+        potential.forEach((id, index) => addCube(id, index <= votes0Length ? Cell.ScytheVisionColors.complete1 : Cell.ScytheVisionColors.complete2));
       }
       else {
         container.innerHTML = '<div class="msg">No cubes to SC for you</div>';
@@ -825,7 +826,7 @@ if (LOCAL) {
             }
           break;
           case 'ews-cubes-tab-sc-info':
-            this.style.backgroundColor = Cell.ScytheVisionColors.complete2;
+            this.style.backgroundColor = Cell.ScytheVisionColors.complete3;
             break;
           case 'ews-cubes-tab-low-wt':
             this.style.backgroundColor = lowWtColor(3);
