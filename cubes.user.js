@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      1.7
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -274,8 +274,36 @@ function Settings() {
 
       potential = tasks.tasks.filter(x => (x.status === 0 || x.status === 11) && x.weight >= 3);
       potential = potential.map(x => x.id);
-      complete = complete.filter(x => x.votes >= 2 && !account.account.admin);
-      complete = complete.map(x => x.id);
+
+      let votes0 = [];
+      let votes1 = [];
+      let votes2 = [];
+
+      complete.forEach(x => { // "complete" contains only cubes with one or more SC votes
+        if (potential.indexOf(x.id) === -1) {
+          return;
+        }
+
+        if (x.votes === 1) {
+          votes1.push(x.id);
+        }
+        else {
+          votes2.push(x.id);
+        }
+      });
+
+      votes1.push(...votes2);
+      potential.forEach(x => { // searching for the cubes with 0 SC votes
+        if (votes1.indexOf(x) === -1) {
+          votes0.push(x);
+        }
+      })
+
+      votes0.push(...votes1);
+      potential = votes0;
+
+      complete  = complete.filter(x => x.votes >= 2 && !account.account.admin);
+      complete  = complete.map(x => x.id);
       potential = potential.filter(x => complete.indexOf(x) === -1);
 
       uid = account.account.uid;
