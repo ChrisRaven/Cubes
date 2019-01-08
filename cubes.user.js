@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cubes
 // @namespace    http://tampermonkey.net/
-// @version      1.7.2
+// @version      1.7.3
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -447,7 +447,7 @@ if (LOCAL) {
     if (subcontainer) {
       K.gid(subcontainer).innerHTML = '';
     }
-    else {
+    else if (container) {
       container.innerHTML = '';
     }
   }
@@ -470,7 +470,7 @@ if (LOCAL) {
   }
 
   function emptyMainMessage() {
-    if (!K.qS('.ews-cubes-cube')) {
+    if (!K.qS('.ews-cubes-cube') && K.gid('main-main-cubes')) {
       K.gid('main-main-cubes').innerHTML = '<div class="msg">No flags, duplicates or ' + (showAdminFrozenCubes ? '' : 'scythe ') + 'frozen cubes</div>';
     }
   }
@@ -677,11 +677,15 @@ if (LOCAL) {
           tabLowWtSc('main-lowwtsc-cubes');
         }
         else {
-          K.gid('ews-cubes-tab-main').innerHTML = 'main <span class="ews-cubes-low-wt-sc-counter">' + lowWtCounter + '</span>';
+          if (K.gid('ews-cubes-tab-main')) {
+            K.gid('ews-cubes-tab-main').innerHTML = 'main <span class="ews-cubes-low-wt-sc-counter">' + lowWtCounter + '</span>';
+          }
         }
       }
       else {
-        K.gid('ews-cubes-tab-main').innerHTML = 'main';
+        if (K.gid('ews-cubes-tab-main')) {
+          K.gid('ews-cubes-tab-main').innerHTML = 'main';
+        }
       }
       
     }, 1000);
