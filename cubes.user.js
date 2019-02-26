@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Cubes
+// @name         Cell Mission Control
 // @namespace    http://tampermonkey.net/
 // @version      1.7.3
 // @description  Shows statuses of cubes
