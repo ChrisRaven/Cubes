@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cell Mission Control
 // @namespace    http://tampermonkey.net/
-// @version      1.7.3
+// @version      1.7.4
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
