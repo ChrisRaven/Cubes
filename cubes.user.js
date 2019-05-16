@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cell Mission Control
 // @namespace    http://tampermonkey.net/
-// @version      1.7.4
+// @version      1.7.5
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -656,6 +656,11 @@ if (LOCAL) {
       id: 'show-lowwtsc-in-main-tab',
       defaultState: false
     });
+    settings.addOption({
+      name: 'Extend the panel, when Leaderboard is closed',
+      id: 'extend-the-panel-when-leaderboard-is-closed',
+      defaultState: true
+    });
 
 
     function changeVisibilityOfTabLowWtSc(state) {
@@ -763,7 +768,7 @@ if (LOCAL) {
         container.innerHTML = html;
       })
       .on('click', '#dismiss-leaderboard', function () {
-        if (compacted) {
+        if (compacted && settings.getValue('extend-the-panel-when-leaderboard-is-closed')) {
           compact(!compacted);
         }
       })
