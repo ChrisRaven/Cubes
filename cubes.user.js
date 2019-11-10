@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cell Mission Control
 // @namespace    http://tampermonkey.net/
-// @version      1.7.5
+// @version      1.7.6
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -214,7 +214,6 @@ if (LOCAL) {
       `<span class="ews-cubes-tab" id="ews-cubes-tab-sc-info">scInfo</span>` +
       `<span class="ews-cubes-tab" id="ews-cubes-tab-low-wt">lowWt</span>` +
       `<span class="ews-cubes-tab" id="ews-cubes-tab-low-wt-sc">lowWtSc</span>` +
-      `<span class="ews-cubes-tab" id="ews-cubes-tab-debug">debug</span>` +
       `<div id="ews-cubes-container">
       </div>
     `;
@@ -432,15 +431,10 @@ if (LOCAL) {
       .always(() => { if (!target) {K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading');}});
   }
 
-  function tabDebug() {
-    debug = true;
-  }
-
   function setActiveTab(target) {
     activeTab = target.id;
     $('.ews-cubes-tab').removeClass('active');
     target.classList.add('active');
-    debug = false;
   }
 
   function clear(subcontainer) {
@@ -556,7 +550,6 @@ if (LOCAL) {
 
   let activeTab = 'ews-cubes-tab-main';
   let clickedCubes = [];
-  let debug = false;
   let container;
   let compacted;
   let compactedCSS;
@@ -592,7 +585,7 @@ if (LOCAL) {
       K.addCSSFile('http://127.0.0.1:8887/styles.css');
     }
     else {
-      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=4');
+      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=5');
     }
 
     compacted = K.ls.get('cubes-compacted');
@@ -669,7 +662,6 @@ if (LOCAL) {
       K.gid('ews-cubes-tab-main').classList.toggle('ews-cubes-wide-tab', state);
       K.gid('ews-cubes-tab-sc-info').classList.toggle('ews-cubes-wide-tab', state);
       K.gid('ews-cubes-tab-low-wt').classList.toggle('ews-cubes-wide-tab', state);
-      K.gid('ews-cubes-tab-debug').classList.toggle('ews-cubes-wide-tab', state);
     }
 
 
@@ -716,13 +708,9 @@ if (LOCAL) {
       tabLowWtSc();
     });
 
-    K.gid('ews-cubes-tab-debug').addEventListener('click', function () {
-      setActiveTab(this);
-      tabDebug();
-    });
 
 
-    $('#ews-cubes-tab-main, #ews-cubes-tab-sc-info, #ews-cubes-tab-low-wt, #ews-cubes-tab-low-wt-sc, #ews-cubes-tab-debug').on('dblclick', function () {
+    $('#ews-cubes-tab-main, #ews-cubes-tab-sc-info, #ews-cubes-tab-low-wt, #ews-cubes-tab-low-wt-sc').on('dblclick', function () {
       compacted = !compacted;
       compact(compacted);
       K.ls.set('cubes-compacted', compacted);
@@ -746,26 +734,6 @@ if (LOCAL) {
         if (!tomni.gameMode) {
           K.gid('ews-cubes-tab-main').click();
         }
-      })
-      .on('mousemove', function () {
-        if (!debug) {
-          return;
-        }
-        
-        let html = '';
-
-        var c = tomni.center.rotation;
-        c = c.clone().multiplyScalar(100).round().multiplyScalar(1 / 100).floor();
-        c = [c.x, c.y, c.z];
-
-        html += '<table id="ews-debug-table">';
-        html += '<tr><td>Cell: </td><td>' + tomni.cell + '</td></tr>';
-        html += '<tr><td>Center: </td><td>' + '&lt;' + c.join(", ") + '&gt;</td></tr>';
-        html += '<tr><td>Cube ID: </td><td>' + (tomni.task ? tomni.task.id : 'null') + '</td></tr>';
-        html += '<tr><td>Last seg: </td><td>' + (tomni.lastClicked || 'null') + '</td></tr>';
-        html += '</table>';
-
-        container.innerHTML = html;
       })
       .on('click', '#dismiss-leaderboard', function () {
         if (compacted && settings.getValue('extend-the-panel-when-leaderboard-is-closed')) {
