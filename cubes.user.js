@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cell Mission Control
 // @namespace    http://tampermonkey.net/
-// @version      1.7.6
+// @version      1.7.7
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -219,7 +219,7 @@ if (LOCAL) {
     `;
     leaderboard.parentNode.insertBefore(panel, leaderboard.nextElementSibling);
 
-    container = K.gid('ews-cubes-container');
+    container = K.gid('ews-cubes-container'); // global variable
   }
 
   function tabMain() {
@@ -406,6 +406,7 @@ if (LOCAL) {
           }
 
           let result = intersection(myTasks, ids);
+          let ctn = target ? K.gid('main-lowwtsc-cubes') : container;
 
           if (target) {
             clear('main-lowwtsc-cubes');
@@ -416,8 +417,11 @@ if (LOCAL) {
 
           if (result.length) {
             result.forEach(id => addCube(id, Cell.ScytheVisionColors.base, target ? 'main-lowwtsc-cubes' : ''));
+            addUnSClowWtSCbutton(target ? 'main-lowwtsc-cubes' : '');
+            ctn.dataset.lowWtSCedIds = JSON.stringify(result);
           }
           else {
+            delete ctn.dataset.lowWtSCedIds;
             if (target) {
               emptyMainMessage();
             }
@@ -429,6 +433,40 @@ if (LOCAL) {
       })
       .fail((jqXHR, textStatus, errorThrown) => console.log(textStatus, errorThrown))
       .always(() => { if (!target) {K.gid('ews-cubes-tab-low-wt-sc').classList.remove('loading');}});
+  }
+
+  function unSCallLowWtSCed(ids, target) {
+    let counter = ids.length;
+    ids.forEach(id => {
+      $.post('/1.0/task/' + id, {
+        action: 'uncomplete',
+      }, 'json')
+      .done(function () {
+        if (!--counter) {
+          removeUnSClowWtSCbutton();
+        }
+        K.gid('cube-' + id).remove();
+        tomni.getCurrentCell().update();
+
+        if (target.id === 'ews-cubes-container') {
+          container.innerHTML = '<div class="msg">No low-weight cubes SC-ed by you</div>';
+        }
+        else {
+          emptyMainMessage();
+        }
+      });
+    })
+  }
+
+  function addUnSClowWtSCbutton(target) {
+    let button = document.createElement('div');
+    button.id = 'unSClowWtSC';
+    button.innerHTML = 'unSC SCed lowWt';
+    (target ? K.gid(target) : container).appendChild(button);
+  }
+
+  function removeUnSClowWtSCbutton() {
+    K.gid('unSClowWtSC').remove();
   }
 
   function setActiveTab(target) {
@@ -455,6 +493,7 @@ if (LOCAL) {
     }
     cube.dataset.id = id;
     cube.title = id;
+    cube.id = 'cube-' + id;
     if (subcontainer) {
       K.gid(subcontainer).appendChild(cube);
     }
@@ -585,7 +624,7 @@ if (LOCAL) {
       K.addCSSFile('http://127.0.0.1:8887/styles.css');
     }
     else {
-      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=5');
+      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=6');
     }
 
     compacted = K.ls.get('cubes-compacted');
@@ -811,6 +850,12 @@ if (LOCAL) {
           case 'ews-cubes-tab-low-wt-sc':
             this.style.backgroundColor = Cell.ScytheVisionColors.complete3;
             break;
+        }
+      })
+      .on('click', '#unSClowWtSC', function () {
+        let ids = this.parentElement.dataset.lowWtSCedIds;
+        if (ids) {
+          unSCallLowWtSCed(JSON.parse(ids), this.parentElement);
         }
       });
 
