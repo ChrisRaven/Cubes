@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cell Mission Control
 // @namespace    http://tampermonkey.net/
-// @version      1.7.7
+// @version      1.7.7.1
 // @description  Shows statuses of cubes
 // @author       Krzysztof Kruk
 // @match        https://*.eyewire.org/*
@@ -624,7 +624,7 @@ if (LOCAL) {
       K.addCSSFile('http://127.0.0.1:8887/styles.css');
     }
     else {
-      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=6');
+      K.addCSSFile('https://chrisraven.github.io/EyeWire-Cubes/styles.css?v=7');
     }
 
     compacted = K.ls.get('cubes-compacted');
